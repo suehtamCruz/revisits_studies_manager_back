@@ -1,0 +1,64 @@
+@HostAddress = http://localhost:5247
+@token = {{login.response.body.token}}
+@id = 000000000000000000000000
+
+### Cadastro
+# @name register
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Joao Silva",
+  "email": "joao@email.com",
+  "password": "123456"
+}
+
+### Login
+# @name login
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao@email.com",
+  "password": "123456"
+}
+
+### Listar (com filtros opcionais: ?dayOfWeek=Sunday&type=Revisit)
+GET {{HostAddress}}/api/revisitAndStudies?dayOfWeek=Sunday&type=Revisit
+Authorization: Bearer {{token}}
+
+### Buscar por id (ObjectId retornado no POST)
+GET {{HostAddress}}/api/revisitAndStudies/{{id}}
+Authorization: Bearer {{token}}
+
+### Criar
+POST {{HostAddress}}/api/revisitAndStudies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maria",
+  "age": 35,
+  "dayOfWeek": "Sunday",
+  "details": "Estudo biblico semanal",
+  "address": "Rua A, 123",
+  "type": "Study"
+}
+
+### Atualizar
+PUT {{HostAddress}}/api/revisitAndStudies/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maria",
+  "age": 36,
+  "dayOfWeek": "Monday",
+  "details": "Mudou o dia",
+  "address": "Rua A, 123",
+  "type": "Revisit"
+}
+
+### Deletar
+DELETE {{HostAddress}}/api/revisitAndStudies/{{id}}
+Authorization: Bearer {{token}}
