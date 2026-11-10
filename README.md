@@ -161,6 +161,37 @@ GET /api/revisitAndStudies?dayOfWeek=3&type=Study
 | `Jwt:Issuer` / `Jwt:Audience`  | Emissor e audiência validados no token               |
 | `Jwt:ExpiryMinutes`            | Tempo de expiração do token (padrão: 60 min)         |
 
+## Deploy (Render)
+
+O projeto inclui um `Dockerfile` — no Render, crie um **Web Service** com runtime **Docker** apontando para este repositório.
+
+### Variáveis de ambiente no Render
+
+| Key                          | Valor                                                        |
+| ---------------------------- | ------------------------------------------------------------ |
+| `ConnectionStrings__MongoDb` | Sua connection string do MongoDB Atlas (com usuário e senha) |
+| `Jwt__Key`                   | Chave secreta forte para assinar os tokens (gere uma nova)   |
+| `Jwt__Issuer`                | `RevisitsStudiesManager` (opcional — já é o padrão)          |
+| `Jwt__Audience`              | `RevisitsStudiesManager` (opcional — já é o padrão)          |
+| `ASPNETCORE_ENVIRONMENT`     | `Production`                                                 |
+
+> O `__` (dois underlines) é o separador de configuração do .NET — `ConnectionStrings__MongoDb` equivale a `ConnectionStrings:MongoDb` no appsettings.
+
+A aplicação detecta automaticamente a variável `PORT` injetada pelo Render e faz bind em `0.0.0.0:{PORT}`.
+
+### MongoDB Atlas
+
+O Render usa IPs de saída dinâmicos. No Atlas, em **Network Access**, libere `0.0.0.0/0` (ou os IPs do Render) para permitir a conexão.
+
+### Segredos locais
+
+A connection string real e a chave JWT ficam em `dotnet user-secrets` (fora do git):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:MongoDb" "<sua-connection-string>"
+dotnet user-secrets list
+```
+
 ## Testes rápidos
 
 O arquivo `RevisitsStudiesManager.Back.http` contém requisições prontas para todas as rotas (compatível com VS Code REST Client / Rider / Visual Studio).
