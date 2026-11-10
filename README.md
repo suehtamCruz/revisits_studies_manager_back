@@ -174,6 +174,12 @@ O projeto inclui um `Dockerfile` — no Render, crie um **Web Service** com runt
 | `Jwt__Issuer`                | `RevisitsStudiesManager` (opcional — já é o padrão)          |
 | `Jwt__Audience`              | `RevisitsStudiesManager` (opcional — já é o padrão)          |
 | `ASPNETCORE_ENVIRONMENT`     | `Production`                                                 |
+| `Cors__AllowedOrigins__0`    | URL do seu frontend em produção (ex: `https://meu-front.vercel.app`) |
+
+### CORS
+
+- **Local**: qualquer origem `localhost`/`127.0.0.1` em qualquer porta é liberada automaticamente
+- **Produção**: adicione as URLs do frontend em `Cors:AllowedOrigins` ou via env vars `Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, etc.
 
 > O `__` (dois underlines) é o separador de configuração do .NET — `ConnectionStrings__MongoDb` equivale a `ConnectionStrings:MongoDb` no appsettings.
 
