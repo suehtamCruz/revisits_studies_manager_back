@@ -32,9 +32,7 @@ public class RevisitAndStudy
     [Range(0, 130)]
     public int Age { get; set; }
 
-    /// <summary>Dia da semana da visita/estudo (Sunday..Saturday).</summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    [BsonRepresentation(BsonType.String)]
+    /// <summary>Dia da semana da visita/estudo (0=Sunday .. 6=Saturday).</summary>
     public DayOfWeek DayOfWeek { get; set; }
 
     /// <summary>Detalhes/observações sobre o registro.</summary>

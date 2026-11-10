@@ -42,12 +42,16 @@ http://localhost:5247/swagger
 
 O documento é emitido no formato **Swagger 2.0** (`swagger: "2.0"`).
 
-Os endpoints de `revisitAndStudies` exigem autenticação. Para testá-los no Swagger:
+Os endpoints de `revisitAndStudies` exigem autenticação (aparecem com cadeado no Swagger). Para testá-los:
 
-1. Cadastre-se em `POST /api/auth/register` ou faça login em `POST /api/auth/login`
+1. Faça login em `POST /api/auth/login` (ou cadastre-se em `POST /api/auth/register`)
 2. Copie o `token` retornado
 3. Clique no botão **Authorize** no topo da página
-4. Cole o token (apenas o token, sem "Bearer") e confirme
+4. Digite `Bearer {seu-token}` — **incluindo a palavra "Bearer" e um espaço antes do token** — e confirme
+
+Exemplo: `Bearer eyJhbGciOiJIUzI1NiIs...`
+
+Depois disso, todas as rotas protegidas funcionam direto pelo Swagger.
 
 ## Autenticação (JWT)
 
@@ -99,7 +103,7 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 | `id`        | string | ObjectId do MongoDB (gerado automaticamente)     |
 | `name`      | string | Nome da pessoa (obrigatório)                     |
 | `age`       | int    | Idade (0–130)                                    |
-| `dayOfWeek` | enum   | `Sunday`, `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday` |
+| `dayOfWeek` | int    | `0` = Sunday, `1` = Monday, `2` = Tuesday, `3` = Wednesday, `4` = Thursday, `5` = Friday, `6` = Saturday |
 | `details`   | string | Detalhes/observações (opcional)                  |
 | `address`   | string | Endereço (obrigatório)                           |
 | `type`      | enum   | `Revisit` ou `Study`                             |
@@ -118,7 +122,7 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 
 | Param       | Valores                                                       |
 | ----------- | ------------------------------------------------------------- |
-| `dayOfWeek` | `Sunday`, `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday` |
+| `dayOfWeek` | `0` a `6` (0=Sunday .. 6=Saturday)                            |
 | `type`      | `Revisit`, `Study`                                            |
 
 Os dois filtros podem ser combinados. Exemplos:
@@ -128,10 +132,10 @@ Os dois filtros podem ser combinados. Exemplos:
 GET /api/revisitAndStudies?type=Revisit
 
 # Todos os registros de domingo
-GET /api/revisitAndStudies?dayOfWeek=Sunday
+GET /api/revisitAndStudies?dayOfWeek=0
 
 # Estudos de quarta-feira
-GET /api/revisitAndStudies?dayOfWeek=Wednesday&type=Study
+GET /api/revisitAndStudies?dayOfWeek=3&type=Study
 ```
 
 ### Exemplo de body (POST/PUT)
@@ -140,7 +144,7 @@ GET /api/revisitAndStudies?dayOfWeek=Wednesday&type=Study
 {
   "name": "Maria",
   "age": 35,
-  "dayOfWeek": "Sunday",
+  "dayOfWeek": 0,
   "details": "Estudo semanal",
   "address": "Rua A, 123",
   "type": "Study"

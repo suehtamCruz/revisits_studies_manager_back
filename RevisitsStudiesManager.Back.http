@@ -23,8 +23,8 @@ Content-Type: application/json
   "password": "123456"
 }
 
-### Listar (com filtros opcionais: ?dayOfWeek=Sunday&type=Revisit)
-GET {{HostAddress}}/api/revisitAndStudies?dayOfWeek=Sunday&type=Revisit
+### Listar (com filtros opcionais: ?dayOfWeek=0&type=Revisit)
+GET {{HostAddress}}/api/revisitAndStudies?dayOfWeek=0&type=Revisit
 Authorization: Bearer {{token}}
 
 ### Buscar por id (ObjectId retornado no POST)
@@ -39,7 +39,7 @@ Content-Type: application/json
 {
   "name": "Maria",
   "age": 35,
-  "dayOfWeek": "Sunday",
+  "dayOfWeek": 0,
   "details": "Estudo biblico semanal",
   "address": "Rua A, 123",
   "type": "Study"
@@ -53,7 +53,7 @@ Content-Type: application/json
 {
   "name": "Maria",
   "age": 36,
-  "dayOfWeek": "Monday",
+  "dayOfWeek": 1,
   "details": "Mudou o dia",
   "address": "Rua A, 123",
   "type": "Revisit"

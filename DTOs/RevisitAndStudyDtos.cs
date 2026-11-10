@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using RevisitsStudiesManager.Back.Models;
 
 namespace RevisitsStudiesManager.Back.DTOs;
@@ -15,8 +14,7 @@ public class RevisitAndStudyRequest
     [Range(0, 130)]
     public int Age { get; set; }
 
-    /// <summary>Dia da semana (Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday).</summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    /// <summary>Dia da semana (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday).</summary>
     public DayOfWeek DayOfWeek { get; set; }
 
     /// <summary>Detalhes/observações (opcional).</summary>

@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using RevisitsStudiesManager.Back.Data;
 using RevisitsStudiesManager.Back.Models;
+using RevisitsStudiesManager.Back.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,27 +25,12 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
+        Type = SecuritySchemeType.ApiKey,
         In = ParameterLocation.Header,
-        Description = "Informe o token JWT obtido em /api/auth/login. Exemplo: eyJhbGciOi..."
+        Description = "Insira: Bearer {seu token JWT}. Obtenha o token em POST /api/auth/login."
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+    options.OperationFilter<AuthorizeCheckOperationFilter>();
 
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
