@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -10,6 +11,8 @@ namespace RevisitsStudiesManager.Back.Controllers;
 
 /// <summary>
 /// CRUD de revisitas e estudos. Requer autenticação via token JWT.
+/// Todos os registros pertencem ao usuário autenticado — cada usuário
+/// só vê e só pode alterar os próprios registros.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -25,18 +28,18 @@ public class RevisitAndStudiesController : ControllerBase
     }
 
     /// <summary>
-    /// Lista revisitas e estudos, com filtros opcionais.
+    /// Lista as revisitas e estudos do usuário logado, com filtros opcionais.
     /// </summary>
-    /// <param name="dayOfWeek">Filtra pelo dia da semana (Sunday..Saturday).</param>
+    /// <param name="dayOfWeek">Filtra pelo dia da semana (0=Sunday .. 6=Saturday).</param>
     /// <param name="type">Filtra pelo tipo: Revisit ou Study.</param>
-    /// <response code="200">Lista de registros.</response>
+    /// <response code="200">Lista de registros do usuário logado.</response>
     /// <response code="401">Token ausente ou inválido.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<RevisitAndStudy>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll([FromQuery] DayOfWeek? dayOfWeek, [FromQuery] RevisitAndStudyType? type)
     {
-        var filter = Builders<RevisitAndStudy>.Filter.Empty;
+        var filter = Builders<RevisitAndStudy>.Filter.Eq(r => r.UserId, GetUserId());
 
         if (dayOfWeek.HasValue)
             filter &= Builders<RevisitAndStudy>.Filter.Eq(r => r.DayOfWeek, dayOfWeek.Value);
@@ -48,7 +51,7 @@ public class RevisitAndStudiesController : ControllerBase
     }
 
     /// <summary>
-    /// Busca um registro pelo id.
+    /// Busca um registro do usuário logado pelo id.
     /// </summary>
     /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
     /// <response code="200">Registro encontrado.</response>
@@ -61,14 +64,14 @@ public class RevisitAndStudiesController : ControllerBase
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
         var item = await _context.RevisitAndStudies
-            .Find(r => r.Id == id)
+            .Find(r => r.Id == id && r.UserId == GetUserId())
             .FirstOrDefaultAsync();
 
         return item is null ? NotFound() : Ok(item);
     }
 
     /// <summary>
-    /// Cria uma nova revisita ou estudo.
+    /// Cria uma nova revisita ou estudo vinculada ao usuário logado.
     /// </summary>
     /// <param name="request">Dados do registro.</param>
     /// <response code="201">Registro criado.</response>
@@ -85,7 +88,8 @@ public class RevisitAndStudiesController : ControllerBase
             DayOfWeek = request.DayOfWeek,
             Details = request.Details,
             Address = request.Address,
-            Type = request.Type
+            Type = request.Type,
+            UserId = GetUserId()
         };
 
         await _context.RevisitAndStudies.InsertOneAsync(item);
@@ -94,7 +98,7 @@ public class RevisitAndStudiesController : ControllerBase
     }
 
     /// <summary>
-    /// Atualiza um registro existente.
+    /// Atualiza um registro do usuário logado.
     /// </summary>
     /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
     /// <param name="request">Novos dados do registro.</param>
@@ -115,15 +119,18 @@ public class RevisitAndStudiesController : ControllerBase
             DayOfWeek = request.DayOfWeek,
             Details = request.Details,
             Address = request.Address,
-            Type = request.Type
+            Type = request.Type,
+            UserId = GetUserId()
         };
 
-        var result = await _context.RevisitAndStudies.ReplaceOneAsync(r => r.Id == id, item);
+        var result = await _context.RevisitAndStudies
+            .ReplaceOneAsync(r => r.Id == id && r.UserId == GetUserId(), item);
+
         return result.MatchedCount == 0 ? NotFound() : Ok(item);
     }
 
     /// <summary>
-    /// Remove um registro.
+    /// Remove um registro do usuário logado.
     /// </summary>
     /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
     /// <response code="204">Registro removido.</response>
@@ -135,7 +142,13 @@ public class RevisitAndStudiesController : ControllerBase
     {
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
-        var result = await _context.RevisitAndStudies.DeleteOneAsync(r => r.Id == id);
+        var result = await _context.RevisitAndStudies
+            .DeleteOneAsync(r => r.Id == id && r.UserId == GetUserId());
+
         return result.DeletedCount == 0 ? NotFound() : NoContent();
     }
+
+    private string? GetUserId() =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        User.FindFirstValue("sub");
 }

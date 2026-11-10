@@ -92,11 +92,15 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
-        var users = scope.ServiceProvider.GetRequiredService<MongoDbContext>().Users;
+        var context = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
         var indexModel = new CreateIndexModel<User>(
             Builders<User>.IndexKeys.Ascending(u => u.Email),
             new CreateIndexOptions { Unique = true });
-        await users.Indexes.CreateOneAsync(indexModel);
+        await context.Users.Indexes.CreateOneAsync(indexModel);
+
+        var userIdIndex = new CreateIndexModel<RevisitAndStudy>(
+            Builders<RevisitAndStudy>.IndexKeys.Ascending(r => r.UserId));
+        await context.RevisitAndStudies.Indexes.CreateOneAsync(userIdIndex);
     }
     catch (Exception ex)
     {

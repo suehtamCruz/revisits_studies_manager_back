@@ -46,4 +46,8 @@ public class RevisitAndStudy
     /// <summary>Tipo do registro: Revisit ou Study.</summary>
     [BsonRepresentation(BsonType.String)]
     public RevisitAndStudyType Type { get; set; }
+
+    /// <summary>Id do usuário que criou o registro.</summary>
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? UserId { get; set; }
 }

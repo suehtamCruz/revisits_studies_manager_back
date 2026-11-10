@@ -96,6 +96,8 @@ Authorization: Bearer {token}
 
 Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam `401` sem ele).
 
+**Cada usuário só acessa os próprios registros**: o `userId` do usuário autenticado (claim `sub` do JWT) é salvo na criação e todas as buscas/updates/deletes são filtrados por ele — um usuário não vê nem altera registros de outro.
+
 ### Model
 
 | Campo       | Tipo   | Descrição                                        |
@@ -107,6 +109,7 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 | `details`   | string | Detalhes/observações (opcional)                  |
 | `address`   | string | Endereço (obrigatório)                           |
 | `type`      | enum   | `Revisit` ou `Study`                             |
+| `userId`    | string | ObjectId do usuário dono (preenchido automaticamente pelo token) |
 
 ### Endpoints
 
