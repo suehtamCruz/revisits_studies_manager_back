@@ -42,21 +42,18 @@ Content-Type: application/json
   "dayOfWeek": 0,
   "details": "Estudo biblico semanal",
   "address": "Rua A, 123",
-  "type": "Study"
+  "type": "Study",
+  "lastVisit": "2026-11-09"
 }
 
-### Atualizar
-PUT {{HostAddress}}/api/revisitAndStudies/{{id}}
+### Atualizar parcialmente (envie só os campos alterados)
+PATCH {{HostAddress}}/api/revisitAndStudies/{{id}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "Maria",
   "age": 36,
-  "dayOfWeek": 1,
-  "details": "Mudou o dia",
-  "address": "Rua A, 123",
-  "type": "Revisit"
+  "lastVisit": "2026-11-10T00:00:00.000Z"
 }
 
 ### Deletar

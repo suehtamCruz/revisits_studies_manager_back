@@ -47,6 +47,10 @@ public class RevisitAndStudy
     [BsonRepresentation(BsonType.String)]
     public RevisitAndStudyType Type { get; set; }
 
+    /// <summary>Data da última visita (string ISO 8601, ex: "2026-11-10T00:00:00Z"). Opcional.</summary>
+    [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
+    public DateTime? LastVisit { get; set; }
+
     /// <summary>Id do usuário que criou o registro.</summary>
     [BsonRepresentation(BsonType.ObjectId)]
     public string? UserId { get; set; }

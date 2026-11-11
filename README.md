@@ -109,6 +109,7 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 | `details`   | string | Detalhes/observações (opcional)                  |
 | `address`   | string | Endereço (obrigatório)                           |
 | `type`      | enum   | `Revisit` ou `Study`                             |
+| `lastVisit` | string | Data da última visita em formato ISO 8601 (opcional). Aceita `"2026-11-09"` ou `"2026-11-09T00:00:00.000Z"` |
 | `userId`    | string | ObjectId do usuário dono (preenchido automaticamente pelo token) |
 
 ### Endpoints
@@ -118,7 +119,7 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 | `GET`    | `/api/revisitAndStudies`      | Lista todos                  |
 | `GET`    | `/api/revisitAndStudies/{id}` | Busca por id                 |
 | `POST`   | `/api/revisitAndStudies`      | Cria registro                |
-| `PUT`    | `/api/revisitAndStudies/{id}` | Atualiza registro            |
+| `PATCH`  | `/api/revisitAndStudies/{id}` | Atualização parcial          |
 | `DELETE` | `/api/revisitAndStudies/{id}` | Remove registro (`204`)      |
 
 ### Filtro por query params — `GET /api/revisitAndStudies`
@@ -141,7 +142,18 @@ GET /api/revisitAndStudies?dayOfWeek=0
 GET /api/revisitAndStudies?dayOfWeek=3&type=Study
 ```
 
-### Exemplo de body (POST/PUT)
+### PATCH — atualização parcial
+
+`PATCH /api/revisitAndStudies/{id}` altera **somente os campos enviados** — os demais permanecem inalterados. Todos os campos do body são opcionais; enviar um body vazio retorna `400`.
+
+```json
+{
+  "name": "Maria Silva",
+  "lastVisit": "2026-11-10T00:00:00.000Z"
+}
+```
+
+### Exemplo de body (POST)
 
 ```json
 {
@@ -150,7 +162,8 @@ GET /api/revisitAndStudies?dayOfWeek=3&type=Study
   "dayOfWeek": 0,
   "details": "Estudo semanal",
   "address": "Rua A, 123",
-  "type": "Study"
+  "type": "Study",
+  "lastVisit": "2026-11-09"
 }
 ```
 

@@ -89,6 +89,7 @@ public class RevisitAndStudiesController : ControllerBase
             Details = request.Details,
             Address = request.Address,
             Type = request.Type,
+            LastVisit = request.LastVisit,
             UserId = GetUserId()
         };
 
@@ -98,35 +99,49 @@ public class RevisitAndStudiesController : ControllerBase
     }
 
     /// <summary>
-    /// Atualiza um registro do usuário logado.
+    /// Atualiza parcialmente um registro do usuário logado.
+    /// Envie apenas os campos que deseja alterar — os demais permanecem inalterados.
     /// </summary>
     /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
-    /// <param name="request">Novos dados do registro.</param>
+    /// <param name="request">Campos a atualizar (todos opcionais).</param>
     /// <response code="200">Registro atualizado.</response>
+    /// <response code="400">Nenhum campo enviado.</response>
     /// <response code="404">Registro não encontrado.</response>
-    [HttpPut("{id}")]
+    [HttpPatch("{id}")]
     [ProducesResponseType(typeof(RevisitAndStudy), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(string id, RevisitAndStudyRequest request)
+    public async Task<IActionResult> Patch(string id, RevisitAndStudyPatchRequest request)
     {
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
-        var item = new RevisitAndStudy
-        {
-            Id = id,
-            Name = request.Name,
-            Age = request.Age,
-            DayOfWeek = request.DayOfWeek,
-            Details = request.Details,
-            Address = request.Address,
-            Type = request.Type,
-            UserId = GetUserId()
-        };
+        var update = Builders<RevisitAndStudy>.Update;
+        var updates = new List<UpdateDefinition<RevisitAndStudy>>();
+
+        if (request.Name is not null) updates.Add(update.Set(r => r.Name, request.Name));
+        if (request.Age.HasValue) updates.Add(update.Set(r => r.Age, request.Age.Value));
+        if (request.DayOfWeek.HasValue) updates.Add(update.Set(r => r.DayOfWeek, request.DayOfWeek.Value));
+        if (request.Details is not null) updates.Add(update.Set(r => r.Details, request.Details));
+        if (request.Address is not null) updates.Add(update.Set(r => r.Address, request.Address));
+        if (request.Type.HasValue) updates.Add(update.Set(r => r.Type, request.Type.Value));
+        if (request.LastVisit.HasValue) updates.Add(update.Set(r => r.LastVisit, request.LastVisit.Value));
+
+        if (updates.Count == 0)
+            return BadRequest(new { message = "Envie ao menos um campo para atualizar." });
+
+        var filter = Builders<RevisitAndStudy>.Filter.Where(
+            r => r.Id == id && r.UserId == GetUserId());
 
         var result = await _context.RevisitAndStudies
-            .ReplaceOneAsync(r => r.Id == id && r.UserId == GetUserId(), item);
+            .UpdateOneAsync(filter, update.Combine(updates));
 
-        return result.MatchedCount == 0 ? NotFound() : Ok(item);
+        if (result.MatchedCount == 0) return NotFound();
+
+        var item = await _context.RevisitAndStudies
+            .Find(filter)
+            .FirstOrDefaultAsync();
+
+        return Ok(item);
     }
 
     /// <summary>
