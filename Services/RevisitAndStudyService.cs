@@ -71,21 +71,13 @@ public class RevisitAndStudyService : IRevisitAndStudyService
             UserId = userId
         };
 
-        if (request.LastVisit.HasValue)
+        var firstVisitDate = request.LastVisit ?? DateTime.UtcNow;
+        item.Visits.Add(new Visit
         {
-            item.Visits.Add(new Visit
-            {
-                Date = request.LastVisit.Value.ToString("o"),
-                Details = request.Details
-            });
-        } else 
-        {
-            item.Visits.Add(new Visit
-            {
-                Date = DateTime.UtcNow.ToString("o"),
-                Details = request.Details
-            });
-        }
+            Date = firstVisitDate.ToString("o"),
+            Details = request.Details
+        });
+        item.LastVisit = firstVisitDate;
 
         await _context.RevisitAndStudies.InsertOneAsync(item);
         return item;
@@ -123,11 +115,18 @@ public class RevisitAndStudyService : IRevisitAndStudyService
         return result.DeletedCount > 0;
     }
 
-    public async Task<RevisitAndStudy?> AddVisitAsync(string id, Visit visit, string? userId) =>
-        await _context.RevisitAndStudies.FindOneAndUpdateAsync(
+    public async Task<RevisitAndStudy?> AddVisitAsync(string id, Visit visit, string? userId)
+    {
+        var update = Builders<RevisitAndStudy>.Update.Push(r => r.Visits, visit);
+
+        if (DateTime.TryParse(visit.Date, out var visitDate))
+            update = update.Set(r => r.LastVisit, visitDate);
+
+        return await _context.RevisitAndStudies.FindOneAndUpdateAsync(
             OwnedFilter(id, userId),
-            Builders<RevisitAndStudy>.Update.Push(r => r.Visits, visit),
+            update,
             new FindOneAndUpdateOptions<RevisitAndStudy> { ReturnDocument = ReturnDocument.After });
+    }
 
     public async Task<PagedResult<Visit>?> GetAllVisitsAsync(string id, string? userId, int page, int take)
     {
