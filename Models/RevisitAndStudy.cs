@@ -54,4 +54,13 @@ public class RevisitAndStudy
     /// <summary>Id do usuário que criou o registro.</summary>
     [BsonRepresentation(BsonType.ObjectId)]
     public string? UserId { get; set; }
+    
+    /// <summary>Lista de visitas realizadas.</summary>
+    public List<Visit> Visits { get; set; } = new List<Visit>();
+}
+
+public class Visit 
+{
+    public string? Date { get; set; } 
+    public string? Details { get; set; }
 }

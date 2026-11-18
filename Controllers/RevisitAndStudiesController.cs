@@ -2,10 +2,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
-using MongoDB.Driver;
-using RevisitsStudiesManager.Back.Data;
 using RevisitsStudiesManager.Back.DTOs;
 using RevisitsStudiesManager.Back.Models;
+using RevisitsStudiesManager.Back.Services;
 
 namespace RevisitsStudiesManager.Back.Controllers;
 
@@ -20,11 +19,11 @@ namespace RevisitsStudiesManager.Back.Controllers;
 [Produces("application/json")]
 public class RevisitAndStudiesController : ControllerBase
 {
-    private readonly MongoDbContext _context;
+    private readonly IRevisitAndStudyService _service;
 
-    public RevisitAndStudiesController(MongoDbContext context)
+    public RevisitAndStudiesController(IRevisitAndStudyService service)
     {
-        _context = context;
+        _service = service;
     }
 
     /// <summary>
@@ -37,18 +36,8 @@ public class RevisitAndStudiesController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<RevisitAndStudy>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll([FromQuery] DayOfWeek? dayOfWeek, [FromQuery] RevisitAndStudyType? type)
-    {
-        var filter = Builders<RevisitAndStudy>.Filter.Eq(r => r.UserId, GetUserId());
-
-        if (dayOfWeek.HasValue)
-            filter &= Builders<RevisitAndStudy>.Filter.Eq(r => r.DayOfWeek, dayOfWeek.Value);
-
-        if (type.HasValue)
-            filter &= Builders<RevisitAndStudy>.Filter.Eq(r => r.Type, type.Value);
-
-        return Ok(await _context.RevisitAndStudies.Find(filter).ToListAsync());
-    }
+    public async Task<IActionResult> GetAll([FromQuery] DayOfWeek? dayOfWeek, [FromQuery] RevisitAndStudyType? type) =>
+        Ok(await _service.GetAllAsync(GetUserId(), dayOfWeek, type));
 
     /// <summary>
     /// Busca um registro do usuário logado pelo id.
@@ -63,10 +52,7 @@ public class RevisitAndStudiesController : ControllerBase
     {
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
-        var item = await _context.RevisitAndStudies
-            .Find(r => r.Id == id && r.UserId == GetUserId())
-            .FirstOrDefaultAsync();
-
+        var item = await _service.GetByIdAsync(id, GetUserId());
         return item is null ? NotFound() : Ok(item);
     }
 
@@ -81,20 +67,7 @@ public class RevisitAndStudiesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(RevisitAndStudyRequest request)
     {
-        var item = new RevisitAndStudy
-        {
-            Name = request.Name,
-            Age = request.Age,
-            DayOfWeek = request.DayOfWeek,
-            Details = request.Details,
-            Address = request.Address,
-            Type = request.Type,
-            LastVisit = request.LastVisit,
-            UserId = GetUserId()
-        };
-
-        await _context.RevisitAndStudies.InsertOneAsync(item);
-
+        var item = await _service.CreateAsync(request, GetUserId());
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
@@ -115,33 +88,13 @@ public class RevisitAndStudiesController : ControllerBase
     {
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
-        var update = Builders<RevisitAndStudy>.Update;
-        var updates = new List<UpdateDefinition<RevisitAndStudy>>();
-
-        if (request.Name is not null) updates.Add(update.Set(r => r.Name, request.Name));
-        if (request.Age.HasValue) updates.Add(update.Set(r => r.Age, request.Age.Value));
-        if (request.DayOfWeek.HasValue) updates.Add(update.Set(r => r.DayOfWeek, request.DayOfWeek.Value));
-        if (request.Details is not null) updates.Add(update.Set(r => r.Details, request.Details));
-        if (request.Address is not null) updates.Add(update.Set(r => r.Address, request.Address));
-        if (request.Type.HasValue) updates.Add(update.Set(r => r.Type, request.Type.Value));
-        if (request.LastVisit.HasValue) updates.Add(update.Set(r => r.LastVisit, request.LastVisit.Value));
-
-        if (updates.Count == 0)
-            return BadRequest(new { message = "Envie ao menos um campo para atualizar." });
-
-        var filter = Builders<RevisitAndStudy>.Filter.Where(
-            r => r.Id == id && r.UserId == GetUserId());
-
-        var result = await _context.RevisitAndStudies
-            .UpdateOneAsync(filter, update.Combine(updates));
-
-        if (result.MatchedCount == 0) return NotFound();
-
-        var item = await _context.RevisitAndStudies
-            .Find(filter)
-            .FirstOrDefaultAsync();
-
-        return Ok(item);
+        var result = await _service.PatchAsync(id, request, GetUserId());
+        return result.Status switch
+        {
+            PatchStatus.NotFound => NotFound(),
+            PatchStatus.NothingToUpdate => BadRequest(new { message = "Envie ao menos um campo para atualizar." }),
+            _ => Ok(result.Item)
+        };
     }
 
     /// <summary>
@@ -157,10 +110,68 @@ public class RevisitAndStudiesController : ControllerBase
     {
         if (!ObjectId.TryParse(id, out _)) return NotFound();
 
-        var result = await _context.RevisitAndStudies
-            .DeleteOneAsync(r => r.Id == id && r.UserId == GetUserId());
+        return await _service.DeleteAsync(id, GetUserId()) ? NoContent() : NotFound();
+    }
 
-        return result.DeletedCount == 0 ? NotFound() : NoContent();
+    /// <summary>
+    /// Adiciona uma visita à lista de visitas do registro.
+    /// </summary>
+    /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
+    /// <param name="visit">Dados da visita.</param>
+    /// <response code="200">Registro atualizado com a nova visita.</response>
+    /// <response code="404">Registro não encontrado.</response>
+    [HttpPost("{id}/visits")]
+    [ProducesResponseType(typeof(RevisitAndStudy), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddVisit(string id, Visit visit)
+    {
+        if (!ObjectId.TryParse(id, out _)) return NotFound();
+
+        var item = await _service.AddVisitAsync(id, visit, GetUserId());
+        return item is null ? NotFound() : Ok(item);
+    }
+
+    /// <summary>
+    /// Lista as visitas de um registro do usuário logado, com paginação.
+    /// </summary>
+    /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
+    /// <param name="page">Número da página (default: 1).</param>
+    /// <param name="take">Itens por página (default: 10, máx: 100).</param>
+    /// <response code="200">Página de visitas com total, page e take.</response>
+    /// <response code="404">Registro não encontrado.</response>
+    [HttpGet("{id}/visits")]
+    [ProducesResponseType(typeof(PagedResult<Visit>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAllVisits(string id, [FromQuery] int page = 1, [FromQuery] int take = 10)
+    {
+        if (!ObjectId.TryParse(id, out _)) return NotFound();
+
+        var result = await _service.GetAllVisitsAsync(id, GetUserId(), page, take);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Altera o tipo do registro de Revisit para Study.
+    /// </summary>
+    /// <param name="id">Id do registro (ObjectId do MongoDB).</param>
+    /// <response code="200">Registro atualizado com type = Study.</response>
+    /// <response code="400">O registro já é Study.</response>
+    /// <response code="404">Registro não encontrado.</response>
+    [HttpPatch("{id}/type")]
+    [ProducesResponseType(typeof(RevisitAndStudy), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ChangeType(string id)
+    {
+        if (!ObjectId.TryParse(id, out _)) return NotFound();
+
+        var result = await _service.ChangeTypeToStudyAsync(id, GetUserId());
+        return result.Status switch
+        {
+            ChangeTypeStatus.NotFound => NotFound(),
+            ChangeTypeStatus.AlreadyStudy => BadRequest(new { message = "Somente possivel trocar de revisita para estudo" }),
+            _ => Ok(result.Item)
+        };
     }
 
     private string? GetUserId() =>

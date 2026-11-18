@@ -121,6 +121,36 @@ Todas as rotas abaixo exigem o header `Authorization: Bearer {token}` (retornam 
 | `POST`   | `/api/revisitAndStudies`      | Cria registro                |
 | `PATCH`  | `/api/revisitAndStudies/{id}` | Atualização parcial          |
 | `DELETE` | `/api/revisitAndStudies/{id}` | Remove registro (`204`)      |
+| `GET`    | `/api/revisitAndStudies/{id}/visits` | Lista visitas (paginado)     |
+| `POST`   | `/api/revisitAndStudies/{id}/visits` | Adiciona uma visita ao registro |
+| `PATCH`  | `/api/revisitAndStudies/{id}/type`   | Promove Revisit → Study      |
+
+### Paginação — `GET /api/revisitAndStudies/{id}/visits`
+
+| Query param | Default | Descrição                    |
+| ----------- | ------- | ---------------------------- |
+| `page`      | `1`     | Número da página             |
+| `take`      | `10`    | Itens por página (máx: 100)  |
+
+Resposta:
+
+```json
+{
+  "page": 1,
+  "take": 10,
+  "total": 23,
+  "totalPages": 3,
+  "items": [ { "date": "2026-11-11T10:00:00Z", "details": "visita 1" } ]
+}
+```
+
+### Troca de tipo — `PATCH /api/revisitAndStudies/{id}/type`
+
+Promove o registro de `Revisit` para `Study`. É uma transição única: se o registro já for `Study`, retorna `400`:
+
+```json
+{ "message": "Somente possivel trocar de revisita para estudo" }
+```
 
 ### Filtro por query params — `GET /api/revisitAndStudies`
 
@@ -223,11 +253,14 @@ O arquivo `RevisitsStudiesManager.Back.http` contém requisições prontas para 
 ```
 ├── Controllers/
 │   ├── AuthController.cs              # register + login (JWT)
-│   └── RevisitAndStudiesController.cs # CRUD + filtros
+│   └── RevisitAndStudiesController.cs # CRUD + filtros + visits
+├── Services/
+│   ├── AuthService.cs                 # lógica de auth + geração do JWT
+│   └── RevisitAndStudyService.cs      # acesso ao Mongo (queries/updates)
 ├── Data/
 │   └── MongoDbContext.cs              # collections do MongoDB
 ├── DTOs/                              # Requests/responses da API
-├── Models/                            # User, RevisitAndStudy, enums
+├── Models/                            # User, RevisitAndStudy, Visit, enums
 ├── Program.cs                         # DI, JWT, Swagger, índice único
 └── appsettings.json                   # Mongo + config JWT
 ```

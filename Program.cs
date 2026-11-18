@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using RevisitsStudiesManager.Back.Data;
 using RevisitsStudiesManager.Back.Models;
+using RevisitsStudiesManager.Back.Services;
 using RevisitsStudiesManager.Back.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +52,9 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
       .GetDatabase(builder.Configuration["Mongo:Database"]));
 
 builder.Services.AddSingleton<MongoDbContext>();
+
+builder.Services.AddScoped<IRevisitAndStudyService, RevisitAndStudyService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddCors(options =>
 {

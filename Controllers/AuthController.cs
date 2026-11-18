@@ -1,12 +1,6 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using MongoDB.Driver;
-using RevisitsStudiesManager.Back.Data;
 using RevisitsStudiesManager.Back.DTOs;
-using RevisitsStudiesManager.Back.Models;
+using RevisitsStudiesManager.Back.Services;
 
 namespace RevisitsStudiesManager.Back.Controllers;
 
@@ -18,13 +12,11 @@ namespace RevisitsStudiesManager.Back.Controllers;
 [Produces("application/json")]
 public class AuthController : ControllerBase
 {
-    private readonly MongoDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly IAuthService _authService;
 
-    public AuthController(MongoDbContext context, IConfiguration configuration)
+    public AuthController(IAuthService authService)
     {
-        _context = context;
-        _configuration = configuration;
+        _authService = authService;
     }
 
     /// <summary>
@@ -42,21 +34,9 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
-        var existing = await _context.Users
-            .Find(u => u.Email == request.Email)
-            .FirstOrDefaultAsync();
-
-        if (existing is not null)
+        var user = await _authService.RegisterAsync(request);
+        if (user is null)
             return Conflict(new { message = "E-mail já cadastrado." });
-
-        var user = new User
-        {
-            Name = request.Name,
-            Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
-        };
-
-        await _context.Users.InsertOneAsync(user);
 
         return CreatedAtAction(nameof(Register), new { user.Id, user.Name, user.Email });
     }
@@ -71,37 +51,9 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await _context.Users
-            .Find(u => u.Email == request.Email)
-            .FirstOrDefaultAsync();
-
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return Unauthorized(new { message = "E-mail ou senha inválidos." });
-
-        var expiresAt = DateTime.UtcNow.AddMinutes(_configuration.GetValue("Jwt:ExpiryMinutes", 60));
-        return Ok(new AuthResponse { Token = GenerateToken(user, expiresAt), ExpiresAt = expiresAt });
-    }
-
-    private string GenerateToken(User user, DateTime expiresAt)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id!),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Name, user.Name),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var response = await _authService.LoginAsync(request);
+        return response is null
+            ? Unauthorized(new { message = "E-mail ou senha inválidos." })
+            : Ok(response);
     }
 }
