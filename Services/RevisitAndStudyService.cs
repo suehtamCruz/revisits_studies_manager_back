@@ -141,6 +141,7 @@ public class RevisitAndStudyService : IRevisitAndStudyService
         take = Math.Clamp(take, 1, 100);
 
         var visits = item.Visits
+            .OrderByDescending(v => DateTime.TryParse(v.Date, out var d) ? d : DateTime.MinValue)
             .Skip((page - 1) * take)
             .Take(take)
             .ToList();
