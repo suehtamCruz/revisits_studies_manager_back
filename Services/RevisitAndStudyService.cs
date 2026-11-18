@@ -67,17 +67,8 @@ public class RevisitAndStudyService : IRevisitAndStudyService
             Details = request.Details,
             Address = request.Address,
             Type = request.Type,
-            LastVisit = request.LastVisit,
             UserId = userId
         };
-
-        var firstVisitDate = request.LastVisit ?? DateTime.UtcNow;
-        item.Visits.Add(new Visit
-        {
-            Date = firstVisitDate.ToString("o"),
-            Details = request.Details
-        });
-        item.LastVisit = firstVisitDate;
 
         await _context.RevisitAndStudies.InsertOneAsync(item);
         return item;
